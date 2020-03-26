@@ -300,5 +300,26 @@ COMMIT;
 
 SET client_min_messages TO DEFAULT;
 
+CREATE TABLE items (key text primary key, value text not null, t timestamp);
+SELECT create_distributed_table('items','key');
+INSERT INTO items VALUES ('key-1','value-2', '2020-01-01 00:00');
+INSERT INTO items VALUES ('key-2','value-1', '2020-02-02 00:00');
+
+CREATE TABLE other_items (key text primary key, value text not null);
+SELECT create_distributed_table('other_items','key');
+INSERT INTO other_items VALUES ('key-1','value-2');
+
+-- LEFT JOINs are wrapped into a subquery under the covers, which causes GROUP BY
+-- to be separated from the LEFT JOIN. If the GROUP BY is on a primary key we can
+-- normally use any column even ones that are not in the GROUP BY, but not when
+-- it is in the outer query. In that case, we use the any_value aggregate.
+SELECT key, a.value, count(b.value), t
+FROM items a LEFT JOIN other_items b USING (key)
+GROUP BY key HAVING a.value != 'value-2' ORDER BY count(b.value), a.value LIMIT 5;
+
+-- make sure the same logic works for regular joins
+SELECT key, a.value, count(b.value), t
+FROM items a JOIN other_items b USING (key)
+GROUP BY key HAVING a.value = 'value-2' ORDER BY count(b.value), a.value LIMIT 5;
+
 DROP SCHEMA subquery_complex CASCADE;
-SET search_path TO public;

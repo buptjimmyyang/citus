@@ -1637,6 +1637,25 @@ SubqueryPushdownMultiNodeTree(Query *originalQuery)
 	}
 
 	/*
+	 * Group by on primary key allows all columns to appear in the target
+	 * list, but after re-partitioning we will be querying an intermediate
+	 * table that does not have the primary key. We therefore wrap all the
+	 * columns that do not appear in the GROUP BY in an any_value aggregate.
+	 */
+	if (extendedOpNode->groupClauseList != NIL)
+	{
+		extendedOpNode->targetList =
+			(List *) expression_tree_mutator((Node *) extendedOpNode->targetList,
+											 AddAnyValueAggregates,
+											 extendedOpNode->groupClauseList);
+
+		extendedOpNode->havingQual =
+			expression_tree_mutator((Node *) extendedOpNode->havingQual,
+									AddAnyValueAggregates,
+									extendedOpNode->groupClauseList);
+	}
+
+	/*
 	 * Postgres standard planner evaluates expressions in the LIMIT/OFFSET clauses.
 	 * Since we're using original query here, we should manually evaluate the
 	 * expression on the LIMIT and OFFSET clauses. Note that logical optimizer
