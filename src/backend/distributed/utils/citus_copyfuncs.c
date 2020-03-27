@@ -266,7 +266,7 @@ CopyNodeTaskQuery(COPYFUNC_ARGS)
 
 		case TASK_QUERY_OBJECT:
 		{
-			COPY_NODE_FIELD(data.queryForLocalExecution);
+			COPY_NODE_FIELD(data.jobQueryReferenceForLazyDeparsing);
 			break;
 		}
 

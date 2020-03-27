@@ -218,7 +218,7 @@ typedef struct TaskQuery
 	union
 	{
 		/*
-		 * For most queries queryForLocalExecution and/or queryStringLazy is not
+		 * For most queries jobQueryReferenceForLazyDeparsing and/or queryStringLazy is not
 		 * NULL. This means we have a single query for all placements.
 		 *
 		 * If this is not the case, the length of perPlacementQueryStrings is
@@ -227,22 +227,22 @@ typedef struct TaskQuery
 		 * when a query should return node specific values. For example, on which
 		 * node did we succeed storing some result files?
 		 *
-		 * queryForLocalExecution is only not null when the planner thinks the
+		 * jobQueryReferenceForLazyDeparsing is only not null when the planner thinks the
 		 * query could possibly be locally executed. In that case deparsing+parsing
 		 * the query might not be necessary, so we do that lazily.
 		 *
-		 * queryForLocalExecution should only be set by using SetTaskQueryIfShouldLazyDeparse()
+		 * jobQueryReferenceForLazyDeparsing should only be set by using SetTaskQueryIfShouldLazyDeparse()
 		 */
-		Query *queryForLocalExecution;
+		Query *jobQueryReferenceForLazyDeparsing;
 
 		/*
 		 * In almost all cases queryStringLazy should be read only indirectly by
-		 * using TaskQueryStringAllPlacements(). This will populate the field if only the
-		 * queryForLocalExecution field is not NULL.
+		 * using TaskQueryStringForAllPlacements(). This will populate the field if only the
+		 * jobQueryReferenceForLazyDeparsing field is not NULL.
 		 *
 		 * This field should only be set by using SetTaskQueryString() (or as a
-		 * side effect from TaskQueryStringAllPlacements()). Otherwise it might not be in sync
-		 * with queryForLocalExecution.
+		 * side effect from TaskQueryStringForAllPlacements()). Otherwise it might not be in sync
+		 * with jobQueryReferenceForLazyDeparsing.
 		 */
 		char *queryStringLazy;
 

@@ -42,7 +42,6 @@ static void ConvertRteToSubqueryWithEmptyResult(RangeTblEntry *rte);
 static bool ShouldLazyDeparseQuery(Task *task);
 static char * DeparseTaskQuery(Task *task, Query *query);
 static bool IsEachPlacementQueryStringDifferent(Task *task);
-static char * TaskQueryStringForAllPlacements(Task *task);
 static void InitializeTaskQueryIfNecessary(Task *task);
 
 
@@ -119,7 +118,7 @@ RebuildQueryStrings(Job *workerJob)
 		ereport(DEBUG4, (errmsg("query before rebuilding: %s",
 								!isQueryObjectOrText
 								? "(null)"
-								: ApplyLogRedaction(TaskQueryStringAllPlacements(
+								: ApplyLogRedaction(TaskQueryStringForAllPlacements(
 														task)))));
 
 		UpdateTaskQueryString(query, relationId, valuesRTE, task);
@@ -131,7 +130,7 @@ RebuildQueryStrings(Job *workerJob)
 		task->parametersInQueryStringResolved = workerJob->parametersInJobQueryResolved;
 
 		ereport(DEBUG4, (errmsg("query after rebuilding:  %s",
-								ApplyLogRedaction(TaskQueryStringAllPlacements(task)))));
+								ApplyLogRedaction(TaskQueryStringForAllPlacements(task)))));
 	}
 }
 
@@ -418,7 +417,7 @@ ShouldLazyDeparseQuery(Task *task)
 
 /*
  * SetTaskQueryIfShouldLazyDeparse attaches the query to the task so that it can be used during
- * execution. If local execution can possibly take place it sets task->queryForLocalExecution.
+ * execution. If local execution can possibly take place it sets task->jobQueryReferenceForLazyDeparsing.
  * If not it deparses the query and sets queryStringLazy, to avoid blowing the
  * size of the task unnecesarily.
  */
@@ -429,7 +428,7 @@ SetTaskQueryIfShouldLazyDeparse(Task *task, Query *query)
 	{
 		InitializeTaskQueryIfNecessary(task);
 		task->taskQuery->queryType = TASK_QUERY_OBJECT;
-		task->taskQuery->data.queryForLocalExecution = query;
+		task->taskQuery->data.jobQueryReferenceForLazyDeparsing = query;
 		return;
 	}
 
@@ -439,7 +438,7 @@ SetTaskQueryIfShouldLazyDeparse(Task *task, Query *query)
 
 /*
  * SetTaskQueryString attaches the query string to the task so that it can be
- * used during execution. It also unsets queryForLocalExecution to be sure
+ * used during execution. It also unsets jobQueryReferenceForLazyDeparsing to be sure
  * these are kept in sync.
  */
 void
@@ -519,20 +518,6 @@ DeparseTaskQuery(Task *task, Query *query)
 
 
 /*
- * TaskQueryStringAllPlacements generates task query string text if missing.
- *
- * For performance reasons, the queryString is generated lazily. For example
- * for local queries it is usually not needed to generate it, so this way we
- * can skip the expensive deparsing+parsing.
- */
-char *
-TaskQueryStringAllPlacements(Task *task)
-{
-	return TaskQueryStringForAllPlacements(task);
-}
-
-
-/*
  * GetTaskQueryType returns the type of the task query.
  */
 int
@@ -543,32 +528,35 @@ GetTaskQueryType(Task *task)
 
 
 /*
- * TaskQueryStringForAllPlacements returns the query string for the given task.
- * In this case, each placement has the same query string.
+ * TaskQueryStringForAllPlacements generates task query string text if missing.
+ *
+ * For performance reasons, the queryString is generated lazily. For example
+ * for local queries it is usually not needed to generate it, so this way we
+ * can skip the expensive deparsing+parsing.
  */
-static char *
+char *
 TaskQueryStringForAllPlacements(Task *task)
 {
 	if (GetTaskQueryType(task) == TASK_QUERY_TEXT)
 	{
 		return task->taskQuery->data.queryStringLazy;
 	}
-	Query *queryForLocalExecution = task->taskQuery->data.queryForLocalExecution;
-	Assert(task->taskQuery->queryType == TASK_QUERY_OBJECT && queryForLocalExecution !=
+	Query *jobQueryReferenceForLazyDeparsing = task->taskQuery->data.jobQueryReferenceForLazyDeparsing;
+	Assert(task->taskQuery->queryType == TASK_QUERY_OBJECT && jobQueryReferenceForLazyDeparsing !=
 		   NULL);
 
 
 	/*
-	 * Switch to the memory context of task->queryForLocalExecution before generating the query
+	 * Switch to the memory context of task->jobQueryReferenceForLazyDeparsing before generating the query
 	 * string. This way the query string is not freed in between multiple
 	 * executions of a prepared statement. Except when UpdateTaskQueryString is
-	 * used to set task->queryForLocalExecution, in that case it is freed but it will be set to
+	 * used to set task->jobQueryReferenceForLazyDeparsing, in that case it is freed but it will be set to
 	 * NULL on the next execution of the query because UpdateTaskQueryString
 	 * does that.
 	 */
 	MemoryContext previousContext = MemoryContextSwitchTo(GetMemoryChunkContext(
-															  queryForLocalExecution));
-	char *queryString = DeparseTaskQuery(task, queryForLocalExecution);
+															  jobQueryReferenceForLazyDeparsing));
+	char *queryString = DeparseTaskQuery(task, jobQueryReferenceForLazyDeparsing);
 	MemoryContextSwitchTo(previousContext);
 	SetTaskQueryString(task, queryString);
 	return task->taskQuery->data.queryStringLazy;

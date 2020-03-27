@@ -28,7 +28,7 @@ extern void SetTaskQueryString(Task *task, char *queryString);
 extern void SetTaskQueryStringList(Task *task, List *queryStringList);
 extern void SetTaskPerPlacementQueryStrings(Task *task,
 											List *perPlacementQueryStringList);
-extern char * TaskQueryStringAllPlacements(Task *task);
+extern char * TaskQueryStringForAllPlacements(Task *task);
 extern char * TaskQueryStringForPlacement(Task *task, int placementIndex);
 extern bool UpdateRelationsToLocalShardTables(Node *node, List *relationShardList);
 extern int GetTaskQueryType(Task *task);

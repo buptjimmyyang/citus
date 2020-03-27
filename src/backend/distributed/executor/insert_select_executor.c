@@ -1091,7 +1091,7 @@ WrapTaskListForProjection(List *taskList, List *projectedTargetEntries)
 		StringInfo wrappedQuery = makeStringInfo();
 		appendStringInfo(wrappedQuery, "SELECT %s FROM (%s) subquery",
 						 projectedColumnsString->data,
-						 TaskQueryStringAllPlacements(task));
+						 TaskQueryStringForAllPlacements(task));
 		SetTaskQueryString(task, wrappedQuery->data);
 	}
 }
