@@ -31,5 +31,6 @@ extern void SetTaskPerPlacementQueryStrings(Task *task,
 extern char * TaskQueryStringAllPlacements(Task *task);
 extern char * TaskQueryStringForPlacement(Task *task, int placementIndex);
 extern bool UpdateRelationsToLocalShardTables(Node *node, List *relationShardList);
+extern int GetTaskQueryType(Task *task);
 
 #endif /* DEPARSE_SHARD_QUERY_H */

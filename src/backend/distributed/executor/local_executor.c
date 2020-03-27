@@ -219,9 +219,15 @@ ExecuteLocalTaskList(CitusScanState *scanState, List *taskList)
 
 		LogLocalCommand(task);
 
-		char *shardQueryString = task->queryStringLazy
-								 ? task->queryStringLazy
-								 : "<optimized out by local execution>";
+		char *shardQueryString = NULL;
+		if (GetTaskQueryType(task) == TASK_QUERY_TEXT)
+		{
+			shardQueryString = TaskQueryStringAllPlacements(task);
+		}
+		else
+		{
+			shardQueryString = "<optimized out by local execution>";
+		}
 
 		totalRowsProcessed +=
 			ExecuteLocalTaskPlan(scanState, localPlan, shardQueryString);
