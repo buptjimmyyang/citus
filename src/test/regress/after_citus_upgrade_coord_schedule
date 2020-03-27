@@ -2,3 +2,9 @@
 
 test: upgrade_basic_after
 test: upgrade_pg_dist_object_test_after
+
+# ---------
+# ensures that we never leak any connection counts
+# in the shared memory
+# --------
+test: check_connection_stats

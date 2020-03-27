@@ -1,1 +1,7 @@
 test: upgrade_basic_after upgrade_type_after upgrade_ref2ref_after upgrade_distributed_function_after upgrade_rebalance_strategy_after
+
+# ---------
+# ensures that we never leak any connection counts
+# in the shared memory
+# --------
+test: check_connection_stats
